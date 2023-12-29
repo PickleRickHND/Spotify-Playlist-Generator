@@ -1,23 +1,34 @@
-.SearchBar {
-  text-align: center;
-}
 
-.SearchBar-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-.SearchBar-header {
+.SearchBarBody {
   background-color: black;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  min-height: 15vh;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.SearchBar-link {
-  color: #61dafb;
+.SearchBar {
+  display: flex;
+  justify-content: center;
+  width: 60%;
+  align-items: center;
+  flex-direction: column;
+  height: 25px; /* Ajusta a la altura deseada */
+  padding: 10px;
+  background-color: #3f3b3b; /* Ajusta al color de fondo deseado */
+  border-radius: 25px; /* Ajusta para bordes redondeados */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra suave */
+  margin: 0 auto; /* Center the element horizontally */
 }
+
+.SearchBar input[type="text"] {
+  border: none;
+  background-color: transparent;
+  outline: none;
+  font-size: 17px; /* Ajusta al tamaño de fuente deseado */
+  color: white; /* Ajusta al color de fuente deseado */
+  width: 100%; /* Ajusta para el ancho deseado */
+  align-items: center;
+  justify-content: center;
+}
+
+

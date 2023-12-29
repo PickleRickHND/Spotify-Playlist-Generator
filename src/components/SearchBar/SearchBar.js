@@ -1,11 +1,12 @@
-import './SearchBar.css';
+import "./SearchBar.css";
 
 function SearchBar() {
   return (
-    <div className="SearchBar">
-      <header className="SearchBar-header">
+    <div className="SearchBarBody">
+      <div className="SearchBar">
+        <input type="text" placeholder="What do you want to listen to?" />
         
-      </header>
+      </div>
     </div>
   );
 }
