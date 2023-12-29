@@ -1,0 +1,23 @@
+.SearchBar {
+  text-align: center;
+}
+
+.SearchBar-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+.SearchBar-header {
+  background-color: black;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.SearchBar-link {
+  color: #61dafb;
+}
