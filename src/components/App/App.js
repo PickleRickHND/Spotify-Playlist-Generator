@@ -42,32 +42,15 @@ function App() {
     }
   };
 
-  const exportToSpotify = () => {
-    // Implement the logic to export the playlist array to Spotify here
-    // You can use the Spotify API to create a playlist and add tracks to it
-    // Make sure to include the necessary authorization headers with the token
-
-    // Example code to create a playlist using axios:
-    axios
-      .post(
-        "https://api.spotify.com/v1/me/playlists",
-        {
-          name: "My Playlist",
-          public: false,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
-      .then((response) => {
-        const playlistId = response.data.id;
-        //   // Add tracks to the playlist using another API call
-      });
-
-    // Replace the above example code with your actual implementation
+  const removeFromPlaylist = (index) => {
+    setPlaylist((prevPlaylist) => prevPlaylist.filter((_, i) => i !== index));
   };
+
+
+
+  const exportToSpotify = async () => {
+  };
+
 
   const searchTracks = async (e) => {
     e.preventDefault();
@@ -88,7 +71,7 @@ function App() {
   const renderTracks = () => {
     return (
       <div>
-        <h2 style={{ color: "white" }}>TRACKS</h2>
+        <h2 style={{ color: "white" }}>SONGS</h2>
         {tracks.map((elem) => (
           <div className="TrackResults" key={elem.id}>
             {elem.album.images.length ? (
@@ -110,7 +93,7 @@ function App() {
               className="SpotifyButton"
               onClick={() => addToPlaylist(elem.name)}
             >
-              Add to Playlist
+              + Add to Playlist
             </button>
           </div>
         ))}
@@ -121,10 +104,23 @@ function App() {
   const renderPlaylist = () => {
     return (
       <div>
-        <h2 style={{ color: "white", display: "inline" }}>PLAYLIST</h2>
+        <h2 style={{ color: "white", display: "inline"}}>PLAYLIST</h2>
         {playlist.map((track, index) => (
-          <div className="PlaylistTracks" key={index}>
-            {track}
+          <div style={{marginTop: 15}}>
+            <div
+              className="PlaylistTracks"
+              key={index}
+              style={{ display: "inline"}}
+            >
+              {track}
+              <button
+                className="SpotifyButton"
+                style={{ marginLeft: 15}}
+                onClick={() => removeFromPlaylist(index)}
+              >
+                - Remove
+              </button>
+            </div>
           </div>
         ))}
         <button
@@ -148,6 +144,7 @@ function App() {
           <a
             className="SpotifyButton"
             href={`${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}`}
+            style={{ marginLeft: 15 }}
           >
             Log In
           </a>
@@ -172,7 +169,7 @@ function App() {
           />
         </form>
       ) : (
-        <h2>Please Log In</h2>
+        <h2 style={{ color: "white" }}>Please Log In to Continue!</h2>
       )}
       <div className="Columns">
         <div className="TrackResults">
