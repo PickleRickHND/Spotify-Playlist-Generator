@@ -104,23 +104,26 @@ function App() {
   const renderPlaylist = () => {
     return (
       <div>
-        <h2 style={{ color: "white", display: "inline"}}>PLAYLIST</h2>
+        <h2 style={{ color: "white", display: "inline" }}>PLAYLIST</h2>
         {playlist.map((track, index) => (
-          <div style={{marginTop: 15}}>
-            <div
-              className="PlaylistTracks"
-              key={index}
-              style={{ display: "inline"}}
-            >
+          <div
+            style={{
+              marginTop: 15,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between", // Add this line to align items horizontally
+            }}
+          >
+            <div className="PlaylistTracks" key={index}>
               {track}
-              <button
-                className="SpotifyButton"
-                style={{ marginLeft: 15}}
-                onClick={() => removeFromPlaylist(index)}
-              >
-                - Remove
-              </button>
             </div>
+            <button
+              className="SpotifyButton"
+              style={{ marginLeft: 10 }} // Adjust the spacing as needed
+              onClick={() => removeFromPlaylist(index)}
+            >
+              - Remove
+            </button>
           </div>
         ))}
         <button
