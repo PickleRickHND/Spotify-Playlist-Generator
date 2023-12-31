@@ -126,13 +126,18 @@ function App() {
             </button>
           </div>
         ))}
-        <button
-          className="SpotifyButton"
-          style={{ marginTop: 20 }}
-          onClick={exportToSpotify}
-        >
-          Save to Spotify
-        </button>
+
+        {!token ? (
+          <div></div>
+        ) : (
+          <button
+            className="SpotifyButton"
+            style={{ marginTop: 20 }}
+            onClick={exportToSpotify}
+          >
+            Save to Spotify
+          </button>
+        )}
       </div>
     );
   };
