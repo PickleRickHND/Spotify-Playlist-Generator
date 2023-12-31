@@ -1,5 +1,4 @@
 import "./App.css";
-import "../SearchBar/SearchBar";
 import { useEffect, useState } from "react";
 import icon from "../../images/icon.png";
 import axios from "axios";
@@ -12,15 +11,20 @@ function App() {
 
   const [token, setToken] = useState("");
   const [searchKey, setSearchKey] = useState("");
-  const [artist, setArtist] = useState([]);
-  
+  const [tracks, setTracks] = useState([]);
+  const [playlist, setPlaylist] = useState([]);
+
   useEffect(() => {
-    const hash = window.location.hash
+    const hash = window.location.hash;
     let token = window.localStorage.getItem("token");
 
-    if(!token && hash) {
-      token = hash.substring(1).split("&").find(elem => elem.startsWith("access_token")).split("=")[1];
-    
+    if (!token && hash) {
+      token = hash
+        .substring(1)
+        .split("&")
+        .find((elem) => elem.startsWith("access_token"))
+        .split("=")[1];
+
       window.location.hash = "";
       window.localStorage.setItem("token", token);
     }
@@ -30,55 +34,156 @@ function App() {
   const logout = () => {
     setToken("");
     window.localStorage.removeItem("token");
-  }
+  };
 
-  const searchArtists = async (e) => {
+  const addToPlaylist = (elem) => {
+    if (!playlist.includes(elem)) {
+      setPlaylist((prevPlaylist) => [...prevPlaylist, elem]);
+    }
+  };
+
+  const exportToSpotify = () => {
+    // Implement the logic to export the playlist array to Spotify here
+    // You can use the Spotify API to create a playlist and add tracks to it
+    // Make sure to include the necessary authorization headers with the token
+
+    // Example code to create a playlist using axios:
+    axios
+      .post(
+        "https://api.spotify.com/v1/me/playlists",
+        {
+          name: "My Playlist",
+          public: false,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      .then((response) => {
+        const playlistId = response.data.id;
+        //   // Add tracks to the playlist using another API call
+      });
+
+    // Replace the above example code with your actual implementation
+  };
+
+  const searchTracks = async (e) => {
     e.preventDefault();
-    const {data} = await axios.get("https://api.spotify.com/v1/search", {
+    const { data } = await axios.get("https://api.spotify.com/v1/search", {
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
       params: {
         q: searchKey,
-        type: "artist",
-      }
-  })
+        type: "track",
+        limit: 4,
+      },
+    });
 
-  setArtist(data.artists.items);
-}
+    setTracks(data.tracks.items);
+  };
 
-const renderArtists = () => {
-  return artist.map(elem => (
-      <div key={elem.id}>
-        {elem.images.length ? <img width={"50%"} src={elem.images[0].url} alt=""/> : <div>No Image</div>}
-        {elem.name}
+  const renderTracks = () => {
+    return (
+      <div>
+        <h2 style={{ color: "white" }}>TRACKS</h2>
+        {tracks.map((elem) => (
+          <div className="TrackResults" key={elem.id}>
+            {elem.album.images.length ? (
+              <img
+                className="TrackImage"
+                src={elem.album.images[0].url}
+                alt=""
+              />
+            ) : (
+              <div>No Image</div>
+            )}
+            <div style={{ marginTop: 15 }}>
+              <span style={{ color: "white" }}>{elem.name}</span>
+            </div>
+            <div style={{ marginTop: 10, marginBottom: 10 }}>
+              <span style={{ color: "gray" }}>{elem.artists[0].name}</span>
+            </div>
+            <button
+              className="SpotifyButton"
+              onClick={() => addToPlaylist(elem.name)}
+            >
+              Add to Playlist
+            </button>
+          </div>
+        ))}
       </div>
-  ))
-}
+    );
+  };
+
+  const renderPlaylist = () => {
+    return (
+      <div>
+        <h2 style={{ color: "white", display: "inline" }}>PLAYLIST</h2>
+        {playlist.map((track, index) => (
+          <div className="PlaylistTracks" key={index}>
+            {track}
+          </div>
+        ))}
+        <button
+          className="SpotifyButton"
+          style={{ marginTop: 20 }}
+          onClick={exportToSpotify}
+        >
+          Save to Spotify
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="App">
       <header className="App-header">
-        <img src={icon} alt="Example" />
+        <img src={icon} alt="" className="SpotifyIcon" />
         <h1>Spotify Playlist Generator</h1>
+
+        {!token ? (
+          <a
+            className="SpotifyButton"
+            href={`${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}`}
+          >
+            Log In
+          </a>
+        ) : (
+          <button
+            className="SpotifyButton"
+            style={{ marginLeft: 15 }}
+            onClick={logout}
+          >
+            Log Out
+          </button>
+        )}
       </header>
-      
-      {!token ? <a className="SpotifyButton" href={`${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}`}>Log In</a>
-      : <button className="SpotifyButton" onClick={logout}>Log Out</button>}
 
-      {token ?
-      
-      <form onSubmit={searchArtists}>
-        <input type="text" onChange={e => setSearchKey(e.target.value)}/>
-        <button type={"submit"}>Search</button>
-      </form>
-    
-        : <h2>Please Log In</h2>
-      }
+      {token ? (
+        <form onSubmit={searchTracks}>
+          <input
+            className="SearchBar"
+            type="text"
+            placeholder="What do you want to listen to?"
+            onChange={(e) => setSearchKey(e.target.value)}
+          />
+        </form>
+      ) : (
+        <h2>Please Log In</h2>
+      )}
+      <div className="Columns">
+        <div className="TrackResults">
+          <div>{renderTracks()}</div>
+        </div>
 
-      {renderArtists()}
+        <div className="Playlist">
+          <div>{renderPlaylist()}</div>
+        </div>
+      </div>
     </div>
   );
 }
-
 export default App;

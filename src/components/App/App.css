@@ -1,6 +1,7 @@
 .App {
   text-align: center;
   background-color: black;
+  height: 145vh;
 }
 
 .App-header {
@@ -12,7 +13,7 @@
   color: white;
 }
 
-img {
+.SpotifyIcon {
   width: 70px;
   height: 70px;
   border-radius: 50%;
@@ -21,7 +22,7 @@ img {
 }
 
 .SpotifyButton {
-    background-color: #4CAF50; /* Green background */
+    background-color: #57cf5b;
     border: none;
     color: black;
     padding: 10px 20px;
@@ -30,9 +31,85 @@ img {
     text-decoration: none;
     display: inline-block;
     font-size: 16px;
-    margin: 4px 2px;
+    margin: 4px 4px;
     cursor: pointer;
-    border-radius: 20px; /* Rounded corners */
-    outline: none; /* Removes the outline on focus */
+    border-radius: 20px; 
+    outline: none;
+
   }
+
+.TrackImage {
+  width: 120px;
+  height: 120px;
+  border-radius: 5%;
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto; 
+  margin-right: auto; 
+}
+
+.TrackResults {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.Playlist{
+  margin-left: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.PlaylistTracks {
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+  color: white;
+}
+
+.SearchBar {
+  display: flex;
+  justify-content: center;
+  width: 60%;
+  align-items: center;
+  flex-direction: column;
+  height: 25px; 
+  padding: 10px;
+  background-color: #3f3b3b;
+  border-radius: 25px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+  margin: 0 auto; 
+  color: white;
+  font-size: 17px; 
+}
+
+.SearchBar input[type="text"] {
+  border: none;
+  background-color: transparent;
+  outline: none;
+  font-size: 17px; 
+  color: white; 
+  width: 100%; 
+  align-items: center;
+  justify-content: center;
+}
+
+.Columns {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+}
+
+
 
