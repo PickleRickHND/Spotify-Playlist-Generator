@@ -1,27 +1,35 @@
 import "./App.css";
-import { useEffect, useState } from "react";
-import icon from "../../images/icon.png";
+import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
+import icon from "../../images/icon.png";
+import { chunkUris, formatArtists } from "../../utils/spotify";
+
+const CLIENT_ID =
+  process.env.REACT_APP_SPOTIFY_CLIENT_ID || "5618e6d9904642caabe20dcb8772baeb";
+const REDIRECT_URI =
+  process.env.REACT_APP_REDIRECT_URI || "http://localhost:3000";
+const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
+const RESPONSE_TYPE = "token";
+
+const SCOPES = [
+  "playlist-modify-public",
+  "playlist-modify-private",
+  "user-read-private",
+].join("%20");
 
 function App() {
-  const CLIENT_ID = "5618e6d9904642caabe20dcb8772baeb";
-  const REDIRECT_URI = "http://localhost:3000";
-  const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
-  const RESPONSE_TYPE = "token";
-  // Scopes necesarios para crear playlists y modificarlas
-  const SCOPES = [
-    "playlist-modify-public",
-    "playlist-modify-private",
-    "user-read-private",
-  ].join("%20");
-
   const [token, setToken] = useState("");
   const [searchKey, setSearchKey] = useState("");
   const [tracks, setTracks] = useState([]);
   const [playlist, setPlaylist] = useState([]);
   const [playlistName, setPlaylistName] = useState("Mi Nueva Playlist");
-  const [loading, setLoading] = useState(false);
+  const [playlistIsPublic, setPlaylistIsPublic] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [loadingSave, setLoadingSave] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+
+  const messageTimeoutRef = useRef(null);
+  const searchAbortRef = useRef(null);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -42,11 +50,25 @@ function App() {
     setToken(storedToken || "");
   }, []);
 
-  // Mostrar mensaje temporal
-  const showMessage = (text, type) => {
+  useEffect(() => {
+    return () => {
+      if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current);
+      }
+      searchAbortRef.current?.abort();
+    };
+  }, []);
+
+  const showMessage = useCallback((text, type) => {
+    if (messageTimeoutRef.current) {
+      clearTimeout(messageTimeoutRef.current);
+    }
     setMessage({ text, type });
-    setTimeout(() => setMessage({ text: "", type: "" }), 4000);
-  };
+    messageTimeoutRef.current = setTimeout(() => {
+      setMessage({ text: "", type: "" });
+      messageTimeoutRef.current = null;
+    }, 4000);
+  }, []);
 
   const logout = () => {
     setToken("");
@@ -55,12 +77,10 @@ function App() {
     window.localStorage.removeItem("token");
   };
 
-  // Guardar el objeto track completo (no solo el nombre)
   const addToPlaylist = (track) => {
-    // Verificar si el track ya está en la playlist por su ID
     const isAlreadyInPlaylist = playlist.some((t) => t.id === track.id);
     if (!isAlreadyInPlaylist) {
-      setPlaylist((prevPlaylist) => [...prevPlaylist, track]);
+      setPlaylist((prev) => [...prev, track]);
       showMessage(`"${track.name}" agregado a la playlist`, "success");
     } else {
       showMessage(`"${track.name}" ya está en la playlist`, "warning");
@@ -68,12 +88,11 @@ function App() {
   };
 
   const removeFromPlaylist = (index) => {
-    const trackName = playlist[index]?.name;
-    setPlaylist((prevPlaylist) => prevPlaylist.filter((_, i) => i !== index));
+    const trackName = playlist[index]?.name ?? "Canción";
+    setPlaylist((prev) => prev.filter((_, i) => i !== index));
     showMessage(`"${trackName}" removido de la playlist`, "info");
   };
 
-  // Función completa para exportar la playlist a Spotify
   const exportToSpotify = async () => {
     if (playlist.length === 0) {
       showMessage("La playlist está vacía. Agrega canciones primero.", "error");
@@ -85,24 +104,20 @@ function App() {
       return;
     }
 
-    setLoading(true);
+    setLoadingSave(true);
 
     try {
-      // 1. Obtener el ID del usuario actual
       const userResponse = await axios.get("https://api.spotify.com/v1/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const userId = userResponse.data.id;
 
-      // 2. Crear la playlist
       const createPlaylistResponse = await axios.post(
         `https://api.spotify.com/v1/users/${userId}/playlists`,
         {
-          name: playlistName,
+          name: playlistName.trim(),
           description: "Playlist creada con Spotify Playlist Generator",
-          public: true,
+          public: playlistIsPublic,
         },
         {
           headers: {
@@ -113,27 +128,27 @@ function App() {
       );
       const playlistId = createPlaylistResponse.data.id;
 
-      // 3. Agregar los tracks a la playlist
-      const trackUris = playlist.map((track) => track.uri);
-      await axios.post(
-        `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-        {
-          uris: trackUris,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const trackUris = playlist.map((t) => t.uri);
+      const batches = chunkUris(trackUris);
+
+      for (const batch of batches) {
+        await axios.post(
+          `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+          { uris: batch },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
 
       showMessage(
-        `Playlist "${playlistName}" creada exitosamente con ${playlist.length} canciones!`,
+        `Playlist "${playlistName.trim()}" creada con ${playlist.length} canciones.`,
         "success"
       );
 
-      // Limpiar la playlist local después de guardar
       setPlaylist([]);
       setPlaylistName("Mi Nueva Playlist");
     } catch (error) {
@@ -147,7 +162,7 @@ function App() {
         logout();
       } else if (error.response?.status === 403) {
         showMessage(
-          "No tienes permisos suficientes. Por favor, vuelve a iniciar sesión.",
+          "No tienes permisos suficientes. Vuelve a iniciar sesión.",
           "error"
         );
       } else {
@@ -157,7 +172,7 @@ function App() {
         );
       }
     } finally {
-      setLoading(false);
+      setLoadingSave(false);
     }
   };
 
@@ -169,18 +184,21 @@ function App() {
       return;
     }
 
-    setLoading(true);
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+
+    setLoadingSearch(true);
 
     try {
       const { data } = await axios.get("https://api.spotify.com/v1/search", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         params: {
           q: searchKey,
           type: "track",
           limit: 10,
         },
+        signal: controller.signal,
       });
 
       setTracks(data.tracks.items);
@@ -189,6 +207,9 @@ function App() {
         showMessage("No se encontraron canciones.", "info");
       }
     } catch (error) {
+      if (axios.isCancel?.(error) || error.code === "ERR_CANCELED") {
+        return;
+      }
       console.error("Error al buscar:", error);
 
       if (error.response?.status === 401) {
@@ -201,164 +222,241 @@ function App() {
         showMessage("Error al buscar canciones. Intenta de nuevo.", "error");
       }
     } finally {
-      setLoading(false);
+      if (searchAbortRef.current === controller) {
+        setLoadingSearch(false);
+      }
     }
   };
 
-  const renderTracks = () => {
-    return (
-      <div>
-        <h2 style={{ color: "white" }}>CANCIONES</h2>
-        {loading && tracks.length === 0 && (
-          <p style={{ color: "gray" }}>Buscando...</p>
-        )}
-        {tracks.map((track) => (
-          <div className="TrackResults" key={track.id}>
-            {track.album.images.length ? (
-              <img
-                className="TrackImage"
-                src={track.album.images[0].url}
-                alt={track.name}
-              />
-            ) : (
-              <div className="TrackImage" style={{ backgroundColor: "#333" }}>
-                Sin Imagen
-              </div>
-            )}
-            <div style={{ marginTop: 15 }}>
-              <span style={{ color: "white", fontWeight: "bold" }}>
-                {track.name}
-              </span>
-            </div>
-            <div style={{ marginTop: 10, marginBottom: 10 }}>
-              <span style={{ color: "gray" }}>
-                {track.artists.map((artist) => artist.name).join(", ")}
-              </span>
-            </div>
-            <button
-              className="SpotifyButton"
-              onClick={() => addToPlaylist(track)}
-              disabled={loading}
-            >
-              + Agregar a Playlist
-            </button>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderPlaylist = () => {
-    return (
-      <div>
-        <h2 style={{ color: "white" }}>PLAYLIST</h2>
-
-        {token && (
-          <div style={{ marginBottom: 20 }}>
-            <input
-              type="text"
-              className="PlaylistNameInput"
-              placeholder="Nombre de la playlist"
-              value={playlistName}
-              onChange={(e) => setPlaylistName(e.target.value)}
-            />
-          </div>
-        )}
-
-        {playlist.length === 0 ? (
-          <p style={{ color: "gray" }}>
-            Tu playlist está vacía. Busca canciones y agrégalas.
-          </p>
-        ) : (
-          playlist.map((track, index) => (
-            <div key={track.id} className="PlaylistItem">
-              {track.album.images.length > 0 && (
-                <img
-                  src={track.album.images[track.album.images.length - 1].url}
-                  alt={track.name}
-                  className="PlaylistTrackImage"
-                />
-              )}
-              <div className="PlaylistTrackInfo">
-                <span className="PlaylistTrackName">{track.name}</span>
-                <span className="PlaylistTrackArtist">
-                  {track.artists.map((artist) => artist.name).join(", ")}
-                </span>
-              </div>
-              <button
-                className="RemoveButton"
-                onClick={() => removeFromPlaylist(index)}
-                disabled={loading}
-                title="Remover de la playlist"
-              >
-                &times;
-              </button>
-            </div>
-          ))
-        )}
-
-        {token && playlist.length > 0 && (
-          <button
-            className="SpotifyButton SaveButton"
-            onClick={exportToSpotify}
-            disabled={loading}
-          >
-            {loading ? "Guardando..." : `Guardar en Spotify (${playlist.length})`}
-          </button>
-        )}
-      </div>
-    );
-  };
+  const busy = loadingSearch || loadingSave;
 
   return (
     <div className="App">
+      <div className="App-bg" aria-hidden="true" />
+
       <header className="App-header">
-        <img src={icon} alt="Spotify" className="SpotifyIcon" />
-        <h1>Spotify Playlist Generator</h1>
+        <div className="App-headerBrand">
+          <img src={icon} alt="" className="SpotifyIcon" />
+          <div className="App-headerTitles">
+            <p className="App-kicker">Sesión de escucha</p>
+            <h1 className="App-title">Generador de playlists</h1>
+          </div>
+        </div>
 
         {!token ? (
           <a
-            className="SpotifyButton"
-            href={`${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}&scope=${SCOPES}`}
-            style={{ marginLeft: 15 }}
+            className="Btn Btn--primary"
+            href={`${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
+              REDIRECT_URI
+            )}&response_type=${RESPONSE_TYPE}&scope=${SCOPES}`}
           >
-            Iniciar Sesión
+            Conectar Spotify
           </a>
         ) : (
-          <button
-            className="SpotifyButton"
-            style={{ marginLeft: 15 }}
-            onClick={logout}
-          >
-            Cerrar Sesión
+          <button type="button" className="Btn Btn--ghost" onClick={logout}>
+            Cerrar sesión
           </button>
         )}
       </header>
 
-      {/* Mensaje de notificación */}
-      {message.text && (
-        <div className={`Message Message-${message.type}`}>{message.text}</div>
-      )}
-
-      {token ? (
-        <form onSubmit={searchTracks}>
-          <input
-            className="SearchBar"
-            type="text"
-            placeholder="¿Qué quieres escuchar?"
-            value={searchKey}
-            onChange={(e) => setSearchKey(e.target.value)}
-            disabled={loading}
-          />
-        </form>
-      ) : (
-        <h2 style={{ color: "white" }}>¡Inicia sesión para continuar!</h2>
-      )}
-
-      <div className="Columns">
-        <div className="SearchResultsColumn">{renderTracks()}</div>
-        <div className="PlaylistColumn">{renderPlaylist()}</div>
+      <div
+        className="MessageRegion"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {message.text ? (
+          <div
+            className={`Toast Toast--${message.type}`}
+            role="alert"
+          >
+            {message.text}
+          </div>
+        ) : null}
       </div>
+
+      <main className="App-main">
+        {!token ? (
+          <p className="App-cta">
+            Conecta tu cuenta para buscar canciones y guardar una playlist en
+            Spotify.
+          </p>
+        ) : (
+          <>
+            <form className="SearchForm" onSubmit={searchTracks}>
+              <label className="FieldLabel" htmlFor="search-q">
+                Buscar
+              </label>
+              <div className="SearchForm-row">
+                <input
+                  id="search-q"
+                  className="Input SearchInput"
+                  type="search"
+                  placeholder="Álbum, artista o tema…"
+                  value={searchKey}
+                  onChange={(e) => setSearchKey(e.target.value)}
+                  disabled={loadingSearch}
+                  autoComplete="off"
+                  aria-describedby="search-hint"
+                />
+                <button
+                  type="submit"
+                  className="Btn Btn--accent"
+                  disabled={loadingSearch}
+                >
+                  {loadingSearch ? "Buscando…" : "Buscar"}
+                </button>
+              </div>
+              <p id="search-hint" className="FieldHint">
+                Resultados de Spotify (hasta 10). Una nueva búsqueda cancela la
+                anterior.
+              </p>
+            </form>
+
+            <div className="Columns">
+              <section
+                className="Panel Panel--results"
+                aria-labelledby="results-heading"
+              >
+                <h2 id="results-heading" className="Panel-title">
+                  Resultados
+                </h2>
+                {loadingSearch && tracks.length === 0 ? (
+                  <p className="Panel-empty">Buscando en la biblioteca…</p>
+                ) : null}
+                <ul className="TrackList">
+                  {tracks.map((track) => (
+                    <li key={track.id} className="TrackCard">
+                      <div className="TrackCard-media">
+                        {track.album.images.length ? (
+                          <img
+                            className="TrackCard-cover"
+                            src={track.album.images[0].url}
+                            alt=""
+                          />
+                        ) : (
+                          <div className="TrackCard-cover TrackCard-cover--empty">
+                            Sin carátula
+                          </div>
+                        )}
+                      </div>
+                      <div className="TrackCard-body">
+                        <span className="TrackCard-name">{track.name}</span>
+                        <span className="TrackCard-artist">
+                          {formatArtists(track.artists)}
+                        </span>
+                        <button
+                          type="button"
+                          className="Btn Btn--small Btn--primary"
+                          onClick={() => addToPlaylist(track)}
+                          disabled={busy}
+                          aria-label={`Agregar ${track.name} a la playlist`}
+                        >
+                          Añadir
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section
+                className="Panel Panel--playlist"
+                aria-labelledby="playlist-heading"
+              >
+                <h2 id="playlist-heading" className="Panel-title">
+                  Tu lista
+                </h2>
+
+                <div className="PlaylistFields">
+                  <div className="Field">
+                    <label className="FieldLabel" htmlFor="playlist-name">
+                      Nombre de la playlist
+                    </label>
+                    <input
+                      id="playlist-name"
+                      className="Input"
+                      type="text"
+                      placeholder="Ej. Viaje nocturno"
+                      value={playlistName}
+                      onChange={(e) => setPlaylistName(e.target.value)}
+                      disabled={loadingSave}
+                    />
+                  </div>
+
+                  <div className="Field Field--inline">
+                    <input
+                      id="playlist-public"
+                      type="checkbox"
+                      className="Checkbox"
+                      checked={playlistIsPublic}
+                      onChange={(e) => setPlaylistIsPublic(e.target.checked)}
+                      disabled={loadingSave}
+                    />
+                    <label htmlFor="playlist-public" className="CheckboxLabel">
+                      Visible en mi perfil de Spotify
+                    </label>
+                  </div>
+                </div>
+
+                {playlist.length === 0 ? (
+                  <p className="Panel-empty">
+                    Aún no hay canciones. Añade temas desde la izquierda.
+                  </p>
+                ) : (
+                  <ul className="PlaylistItems">
+                    {playlist.map((track, index) => (
+                      <li key={track.id} className="PlaylistItem">
+                        {track.album.images.length > 0 ? (
+                          <img
+                            src={
+                              track.album.images[track.album.images.length - 1]
+                                .url
+                            }
+                            alt=""
+                            className="PlaylistItem-cover"
+                          />
+                        ) : (
+                          <div className="PlaylistItem-cover PlaylistItem-cover--empty" />
+                        )}
+                        <div className="PlaylistItem-text">
+                          <span className="PlaylistItem-name">{track.name}</span>
+                          <span className="PlaylistItem-artist">
+                            {formatArtists(track.artists)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="PlaylistItem-remove"
+                          onClick={() => removeFromPlaylist(index)}
+                          disabled={busy}
+                          aria-label={`Quitar ${track.name} de la lista`}
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {playlist.length > 0 ? (
+                  <button
+                    type="button"
+                    className="Btn Btn--primary Btn--block SaveBtn"
+                    onClick={exportToSpotify}
+                    disabled={loadingSave}
+                    aria-busy={loadingSave}
+                  >
+                    {loadingSave
+                      ? "Guardando en Spotify…"
+                      : `Guardar en Spotify (${playlist.length})`}
+                  </button>
+                ) : null}
+              </section>
+            </div>
+          </>
+        )}
+      </main>
     </div>
   );
 }
