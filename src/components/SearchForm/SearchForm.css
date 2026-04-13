@@ -1,0 +1,17 @@
+.SearchForm {
+  margin-bottom: 2.5rem;
+  animation: fadeUp 0.65s var(--ease-out) both;
+}
+
+.SearchForm-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: stretch;
+  margin-top: 0.5rem;
+}
+
+.SearchInput {
+  flex: 1 1 220px;
+  min-width: 0;
+}

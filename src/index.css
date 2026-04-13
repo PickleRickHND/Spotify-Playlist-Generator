@@ -9,8 +9,8 @@ body {
   font-family: "DM Sans", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #06060a;
-  color: #f4f0e8;
+  background: var(--bg-deep, #06060a);
+  color: var(--text, #f4f0e8);
 }
 
 code {

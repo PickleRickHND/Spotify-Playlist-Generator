@@ -1,0 +1,61 @@
+.MoodGenerator {
+  animation: fadeUp 0.5s var(--ease-out) both;
+}
+
+.MoodGenerator-controls {
+  margin-bottom: 2rem;
+}
+
+.MoodGenerator-limitRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.LimitSelector {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.LimitPill {
+  padding: 0.35rem 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.LimitPill:hover {
+  color: var(--text);
+  border-color: rgba(228, 160, 23, 0.3);
+}
+
+.LimitPill--active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(228, 160, 23, 0.4);
+}
+
+.MoodGenerator-results {
+  margin-top: 1.5rem;
+}
+
+.MoodGenerator-resultsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.MoodGenerator-resultsHeader .Panel-title {
+  margin-bottom: 0;
+}

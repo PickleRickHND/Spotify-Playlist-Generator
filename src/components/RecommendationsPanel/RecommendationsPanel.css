@@ -1,0 +1,30 @@
+.RecommendationsPanel {
+  margin-top: 2rem;
+  animation-delay: 0.2s;
+}
+
+.RecommendationsPanel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.RecommendationsPanel-header .Panel-title {
+  margin-bottom: 0;
+}
+
+.RecommendationsPanel-refreshBtn {
+  gap: 0.35rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}

@@ -1,0 +1,54 @@
+.PlaylistFields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.Field {
+  text-align: left;
+}
+
+.Field--inline {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.Checkbox {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.Checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.CheckboxLabel {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.35;
+}
+
+.PlaylistItems {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.SaveBtn {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.PlaylistPanel-cancel {
+  margin-top: 0.5rem;
+}

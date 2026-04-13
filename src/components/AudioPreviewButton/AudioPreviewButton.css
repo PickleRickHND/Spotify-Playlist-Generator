@@ -1,0 +1,43 @@
+.AudioBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+}
+
+.AudioBtn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.AudioBtn--playing {
+  color: var(--accent);
+}
+
+.AudioBtn--disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.AudioBtn--small {
+  width: 28px;
+  height: 28px;
+}
+
+.AudioBtn-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--accent);
+  pointer-events: none;
+}
