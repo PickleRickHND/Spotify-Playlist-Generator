@@ -17,24 +17,31 @@ export default function RecommendationsPanel({
 }) {
   const prevSeedsRef = useRef("");
 
-  const seedKey = useMemo(
-    () => playlist.slice(0, 5).map((t) => t.id).join(","),
-    [playlist]
-  );
+  const { seedKey, seedTrackIds, artistIds, trackIds } = useMemo(() => {
+    const trackIds = playlist.map((t) => t.id);
+    const seedTrackIds = trackIds.slice(0, 5);
+    const artistIds = playlist
+      .flatMap((t) => (t.artists || []).map((a) => a.id))
+      .filter(Boolean);
+    return {
+      seedKey: seedTrackIds.join(","),
+      seedTrackIds,
+      artistIds,
+      trackIds,
+    };
+  }, [playlist]);
 
   useEffect(() => {
-    const ids = seedKey.split(",").filter(Boolean);
-    if (ids.length >= 2 && seedKey !== prevSeedsRef.current) {
+    if (seedTrackIds.length >= 2 && seedKey !== prevSeedsRef.current) {
       prevSeedsRef.current = seedKey;
-      onFetch(ids);
+      onFetch(seedTrackIds, artistIds, trackIds);
     }
-  }, [seedKey, onFetch]);
+  }, [seedKey, seedTrackIds, artistIds, trackIds, onFetch]);
 
   if (playlist.length < 2) return null;
 
   const handleRefresh = () => {
-    const ids = seedKey.split(",").filter(Boolean);
-    onFetch(ids);
+    onFetch(seedTrackIds, artistIds, trackIds);
   };
 
   return (
@@ -53,10 +60,7 @@ export default function RecommendationsPanel({
           disabled={loadingRecs}
           aria-label="Actualizar recomendaciones"
         >
-          <FiRefreshCw
-            size={14}
-            className={loadingRecs ? "spin" : ""}
-          />
+          <FiRefreshCw size={14} className={loadingRecs ? "spin" : ""} />
           Actualizar
         </button>
       </div>

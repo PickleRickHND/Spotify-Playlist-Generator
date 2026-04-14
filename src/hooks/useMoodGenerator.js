@@ -1,5 +1,17 @@
 import { useCallback, useState } from "react";
-import { getRecommendations, getGenreSeeds } from "../services/spotifyApi";
+import { searchTracks } from "../services/spotifyApi";
+import { GENRE_SEEDS } from "../utils/genres";
+
+// Pick N random items without repetition.
+function sample(array, n) {
+  const copy = [...array];
+  const out = [];
+  while (out.length < n && copy.length > 0) {
+    const idx = Math.floor(Math.random() * copy.length);
+    out.push(copy.splice(idx, 1)[0]);
+  }
+  return out;
+}
 
 export default function useMoodGenerator(showMessage) {
   const [energy, setEnergy] = useState(0.5);
@@ -8,25 +20,13 @@ export default function useMoodGenerator(showMessage) {
   const [tempo, setTempo] = useState(120);
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [limit, setLimit] = useState(20);
-  const [genreOptions, setGenreOptions] = useState([]);
+  const [genreOptions] = useState(GENRE_SEEDS);
   const [generatedTracks, setGeneratedTracks] = useState([]);
   const [loadingGenerate, setLoadingGenerate] = useState(false);
-  const [loadingGenres, setLoadingGenres] = useState(false);
 
   const fetchGenreSeeds = useCallback(async () => {
-    if (genreOptions.length > 0) return;
-    setLoadingGenres(true);
-    try {
-      const { data } = await getGenreSeeds();
-      setGenreOptions(data.genres || []);
-    } catch (err) {
-      if (err.response?.status !== 401) {
-        showMessage("Error al cargar géneros.", "error");
-      }
-    } finally {
-      setLoadingGenres(false);
-    }
-  }, [genreOptions.length, showMessage]);
+    // No-op: genres are loaded from a local list (Spotify deprecated the endpoint).
+  }, []);
 
   const toggleGenre = useCallback(
     (genre) => {
@@ -52,18 +52,29 @@ export default function useMoodGenerator(showMessage) {
 
     setLoadingGenerate(true);
     try {
-      const { data } = await getRecommendations({
-        seed_genres: selectedGenres.join(","),
-        target_energy: energy,
-        target_danceability: danceability,
-        target_valence: valence,
-        target_tempo: tempo,
-        limit,
-      });
-      setGeneratedTracks(data.tracks || []);
+      const perGenre = Math.max(5, Math.ceil((limit * 2) / selectedGenres.length));
+      const results = await Promise.all(
+        selectedGenres.map((genre) =>
+          searchTracks(`genre:"${genre}"`, perGenre).then((res) => res.data.tracks.items || [])
+        )
+      );
 
-      if ((data.tracks || []).length === 0) {
-        showMessage("No se encontraron canciones con esos parámetros.", "info");
+      const seen = new Set();
+      const pool = [];
+      for (const list of results) {
+        for (const track of list) {
+          if (!seen.has(track.id)) {
+            seen.add(track.id);
+            pool.push(track);
+          }
+        }
+      }
+
+      const shuffled = sample(pool, limit);
+      setGeneratedTracks(shuffled);
+
+      if (shuffled.length === 0) {
+        showMessage("No se encontraron canciones con esos géneros.", "info");
       }
     } catch (error) {
       if (error.response?.status !== 401) {
@@ -73,7 +84,7 @@ export default function useMoodGenerator(showMessage) {
     } finally {
       setLoadingGenerate(false);
     }
-  }, [selectedGenres, energy, danceability, valence, tempo, limit, showMessage]);
+  }, [selectedGenres, limit, showMessage]);
 
   return {
     energy,
@@ -89,7 +100,7 @@ export default function useMoodGenerator(showMessage) {
     limit,
     setLimit,
     genreOptions,
-    loadingGenres,
+    loadingGenres: false,
     generatedTracks,
     loadingGenerate,
     generatePlaylist,

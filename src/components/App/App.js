@@ -1,6 +1,6 @@
 import "./App.css";
 import { useCallback, useEffect, useState } from "react";
-import useSpotifyAuth, { generateAuthState } from "../../hooks/useSpotifyAuth";
+import useSpotifyAuth, { buildAuthorizeUrl } from "../../hooks/useSpotifyAuth";
 import useMessage from "../../hooks/useMessage";
 import usePlaylist from "../../hooks/usePlaylist";
 import useSearch from "../../hooks/useSearch";
@@ -24,7 +24,6 @@ import PlaylistBrowser from "../PlaylistBrowser/PlaylistBrowser";
 const CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
 const REDIRECT_URI =
   process.env.REACT_APP_REDIRECT_URI || "http://localhost:3000";
-const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
 
 const SCOPES = [
   "playlist-modify-public",
@@ -33,18 +32,6 @@ const SCOPES = [
   "user-top-read",
   "playlist-read-private",
 ].join(" ");
-
-function buildAuthUrl() {
-  const state = generateAuthState();
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
-    response_type: "token",
-    scope: SCOPES,
-    state,
-  });
-  return `${AUTH_ENDPOINT}?${params.toString()}`;
-}
 
 const TABS = [
   { id: "search", label: "Buscar" },
@@ -72,7 +59,21 @@ function App() {
 }
 
 function AppContent() {
-  const { token, logout } = useSpotifyAuth();
+  const { token, logout, authError, exchanging } = useSpotifyAuth({
+    clientId: CLIENT_ID,
+    redirectUri: REDIRECT_URI,
+  });
+  const [authUrl, setAuthUrl] = useState("");
+
+  useEffect(() => {
+    if (!token && !exchanging) {
+      buildAuthorizeUrl({
+        clientId: CLIENT_ID,
+        redirectUri: REDIRECT_URI,
+        scopes: SCOPES,
+      }).then(setAuthUrl);
+    }
+  }, [token, exchanging]);
   const { message, showMessage } = useMessage();
   const {
     playlist,
@@ -149,14 +150,21 @@ function AppContent() {
       <Header
         token={token}
         logout={handleLogout}
-        authUrl={buildAuthUrl()}
+        authUrl={authUrl}
         profile={profile}
       />
 
       <Toast message={message} />
 
       <main className="App-main">
-        {!token ? (
+        {authError && (
+          <p className="App-cta" style={{ color: "var(--coral)" }}>
+            {authError}
+          </p>
+        )}
+        {exchanging ? (
+          <p className="App-cta">Iniciando sesión…</p>
+        ) : !token ? (
           <p className="App-cta">
             Conecta tu cuenta para buscar canciones y guardar una playlist en
             Spotify.
