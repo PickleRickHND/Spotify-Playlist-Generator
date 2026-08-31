@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { getArtistTopTracks } from "../services/spotifyApi";
+import { searchArtistTracks } from "../services/spotifyApi";
 
 // Shuffle helper using Fisher-Yates.
 function shuffle(array) {
@@ -12,24 +12,26 @@ function shuffle(array) {
 }
 
 /**
- * Since Spotify deprecated /v1/recommendations in Nov 2024, we build a
- * recommendations feed by fetching top tracks of the artists in the playlist
- * and filtering out tracks the user already added.
+ * Spotify depreco /recommendations y retiro el endpoint de top tracks por
+ * artista. La lista se construye con busquedas por nombre de artista y elimina
+ * canciones que ya estan en la playlist.
  */
 export default function useRecommendations(showMessage) {
   const [recommendations, setRecommendations] = useState([]);
   const [loadingRecs, setLoadingRecs] = useState(false);
 
   const fetchRecommendations = useCallback(
-    async (seedTrackIds, playlistArtistIds, playlistTrackIds) => {
-      if (!playlistArtistIds?.length) return;
+    async (_seedTrackIds, playlistArtistNames, playlistTrackIds) => {
+      if (!playlistArtistNames?.length) return;
 
       setLoadingRecs(true);
       try {
-        const uniqueArtists = [...new Set(playlistArtistIds)].slice(0, 5);
+        const uniqueArtists = [...new Set(playlistArtistNames)].slice(0, 5);
         const responses = await Promise.all(
-          uniqueArtists.map((id) =>
-            getArtistTopTracks(id).then((r) => r.data.tracks || []).catch(() => [])
+          uniqueArtists.map((name) =>
+            searchArtistTracks(name)
+              .then((response) => response.data.tracks?.items || [])
+              .catch(() => [])
           )
         );
 

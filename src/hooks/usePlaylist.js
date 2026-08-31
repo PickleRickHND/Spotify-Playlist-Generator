@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from "react";
 import {
-  getCurrentUser,
   createPlaylist,
   addTracksToPlaylist,
   removeTracksFromPlaylist,
@@ -107,11 +106,7 @@ export default function usePlaylist(showMessage, logout) {
         return;
       }
 
-      const userResponse = await getCurrentUser();
-      const userId = userResponse.data.id;
-
       const createResponse = await createPlaylist(
-        userId,
         playlistName.trim(),
         playlistIsPublic,
         "Playlist creada con Spotify Playlist Generator"

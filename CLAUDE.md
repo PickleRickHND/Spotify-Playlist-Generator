@@ -1,47 +1,46 @@
-# CLAUDE.md
+# Guia del proyecto
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Resumen
 
-## Project Overview
+SPA en React 19 y Vite 8 para buscar musica, explorar artistas, construir playlists y guardarlas mediante Spotify Web API. La autenticacion usa Authorization Code con PKCE y renovacion de access tokens sin client secret.
 
-Spotify Playlist Generator — a React SPA that authenticates with Spotify via OAuth implicit grant, lets users search tracks, build a playlist, and save it to their Spotify account.
-
-## Commands
+## Comandos
 
 ```bash
-npm start          # Dev server on http://localhost:3000
-npm run build      # Production build to /build
-npm test           # Jest + React Testing Library (interactive watch mode)
-npm test -- --watchAll=false   # Single CI-friendly test run
+npm run dev            # Servidor local en http://localhost:5173
+npm run lint           # ESLint 10
+npm test               # Vitest
+npm run test:coverage  # Cobertura con V8
+npm run test:e2e       # Playwright Chromium
+npm run build          # Produccion en dist/
 ```
 
-## Environment Setup
+## Entorno
 
-Copy `.env.example` to `.env` and fill in your Spotify app credentials:
-- `REACT_APP_SPOTIFY_CLIENT_ID` — from Spotify Developer Dashboard
-- `REACT_APP_REDIRECT_URI` — must match the redirect URI registered in Spotify (defaults to `http://localhost:3000`)
+- Node.js 24.20.0
+- `VITE_SPOTIFY_CLIENT_ID`: Client ID publico del dashboard de Spotify
+- `VITE_SPOTIFY_REDIRECT_URI`: debe coincidir exactamente con el dashboard
+- No se usa ni se debe agregar un Client Secret al frontend
 
-If `.env` is missing, a hardcoded fallback Client ID is used in `App.js`.
+## Arquitectura
 
-## Architecture
+- `src/components/`: 16 componentes presentacionales en JSX.
+- `src/hooks/`: estado, efectos y flujos de negocio.
+- `src/services/spotifyApi.js`: contratos vigentes de Spotify Web API.
+- `src/services/spotifyAuthSession.js`: almacenamiento y renovacion PKCE.
+- `src/utils/`: helpers puros y generacion PKCE.
 
-This is a Create React App project (React 18). The entire app lives in a single component with no routing.
+## Contratos Spotify 2026
 
-- **`src/components/App/App.js`** — the only component. Handles OAuth token extraction from URL hash, search via Spotify Web API (`/v1/search`), playlist assembly in local state, and export to Spotify (`/v1/users/{id}/playlists` + `/v1/playlists/{id}/tracks`). All Spotify API calls use `axios` with Bearer token auth.
-- **`src/utils/spotify.js`** — two helpers: `chunkUris` (batches track URIs in groups of 100 for the Spotify API limit) and `formatArtists` (comma-joins artist names).
-- **`src/components/App/App.css`** — all styling. Dark editorial theme ("sala de escucha nocturna") with CSS custom properties on `:root`. No CSS framework — BEM-style class names (`TrackCard`, `Panel`, `Btn--primary`, etc.).
-- **`src/index.css`** — global reset and body defaults.
+- Crear playlist: `POST /me/playlists`.
+- Leer, agregar y eliminar items: `/playlists/{id}/items`.
+- Search acepta como maximo 10 resultados por pagina.
+- Top tracks por artista fue retirado; se usa search por nombre de artista.
+- Recommendations y genre seeds estan deprecados; la app usa search y generos locales.
 
-## Spotify API Auth Flow
+## Convenciones
 
-Implicit Grant flow: the app redirects to `accounts.spotify.com/authorize`, Spotify returns an `access_token` in the URL hash. The token is stored in `localStorage` and cleared on logout or 401 responses.
-
-Required scopes: `playlist-modify-public`, `playlist-modify-private`, `user-read-private`.
-
-## UI Language
-
-All user-facing text is in Spanish. Keep this convention when adding or modifying UI strings.
-
-## Fonts
-
-Google Fonts loaded in `public/index.html`: **Fraunces** (display/headings) and **DM Sans** (body text).
+- Texto de interfaz y comentarios nuevos en español.
+- No agregar secretos, tokens ni credenciales reales.
+- Preservar el limite de 100 URIs por operacion de playlist.
+- Toda modificacion de hooks o servicios requiere pruebas.

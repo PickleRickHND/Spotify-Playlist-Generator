@@ -26,15 +26,7 @@ export default function Header({ token, logout, authUrl, profile }) {
             )}
             <div className="Header-userInfo">
               <span className="Header-userName">{profile.displayName}</span>
-              <span
-                className={`Header-badge ${
-                  profile.product === "premium"
-                    ? "Header-badge--premium"
-                    : "Header-badge--free"
-                }`}
-              >
-                {profile.product === "premium" ? "Premium" : "Free"}
-              </span>
+              <span className="Header-badge">Spotify</span>
             </div>
           </div>
         )}

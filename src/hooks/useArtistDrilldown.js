@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { getArtistTopTracks } from "../services/spotifyApi";
+import { searchArtistTracks } from "../services/spotifyApi";
 
 export default function useArtistDrilldown() {
   const [selectedArtist, setSelectedArtist] = useState(null);
@@ -15,8 +15,8 @@ export default function useArtistDrilldown() {
     setLoadingArtistTracks(true);
 
     try {
-      const { data } = await getArtistTopTracks(artist.id);
-      setArtistTopTracks(data.tracks || []);
+      const { data } = await searchArtistTracks(artist.name);
+      setArtistTopTracks(data.tracks?.items || []);
     } catch {
       setArtistTopTracks([]);
     } finally {

@@ -1,20 +1,17 @@
 import axios from "axios";
+import {
+  clearSpotifySession,
+  getValidAccessToken,
+} from "./spotifyAuthSession";
 
 const api = axios.create({
   baseURL: "https://api.spotify.com/v1",
 });
 
-api.interceptors.request.use((config) => {
-  const token = window.localStorage.getItem("token");
-  const expiresAt = parseInt(window.localStorage.getItem("token_expires_at") || "0", 10);
-
-  if (token && (expiresAt === 0 || Date.now() < expiresAt)) {
+api.interceptors.request.use(async (config) => {
+  const token = await getValidAccessToken();
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  } else if (token && expiresAt > 0 && Date.now() >= expiresAt) {
-    window.localStorage.removeItem("token");
-    window.localStorage.removeItem("token_expires_at");
-    window.dispatchEvent(new CustomEvent("spotify-auth-error"));
-    return Promise.reject(new Error("Token expired"));
   }
   return config;
 });
@@ -23,17 +20,21 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      window.localStorage.removeItem("token");
-      window.localStorage.removeItem("token_expires_at");
+      clearSpotifySession();
       window.dispatchEvent(new CustomEvent("spotify-auth-error"));
     }
     return Promise.reject(error);
   }
 );
 
-export function searchTracks(query, limit = 10, signal) {
+export function searchTracks(query, limit = 10, signal, offset = 0) {
   return api.get("/search", {
-    params: { q: query, type: "track", limit },
+    params: {
+      q: query,
+      type: "track",
+      limit: Math.min(Math.max(limit, 1), 10),
+      offset,
+    },
     signal,
   });
 }
@@ -42,8 +43,8 @@ export function getCurrentUser() {
   return api.get("/me");
 }
 
-export function createPlaylist(userId, name, isPublic, description) {
-  return api.post(`/users/${userId}/playlists`, {
+export function createPlaylist(name, isPublic, description) {
+  return api.post("/me/playlists", {
     name,
     public: isPublic,
     description,
@@ -51,21 +52,13 @@ export function createPlaylist(userId, name, isPublic, description) {
 }
 
 export function addTracksToPlaylist(playlistId, uris) {
-  return api.post(`/playlists/${playlistId}/tracks`, { uris });
+  return api.post(`/playlists/${playlistId}/items`, { uris });
 }
 
 export function removeTracksFromPlaylist(playlistId, uris) {
-  return api.delete(`/playlists/${playlistId}/tracks`, {
-    data: { tracks: uris.map((uri) => ({ uri })) },
+  return api.delete(`/playlists/${playlistId}/items`, {
+    data: { items: uris.map((uri) => ({ uri })) },
   });
-}
-
-export function getRecommendations(params) {
-  return api.get("/recommendations", { params });
-}
-
-export function getGenreSeeds() {
-  return api.get("/recommendations/available-genre-seeds");
 }
 
 export function getUserTopItems(type, timeRange = "short_term", limit = 10) {
@@ -74,10 +67,9 @@ export function getUserTopItems(type, timeRange = "short_term", limit = 10) {
   });
 }
 
-export function getArtistTopTracks(artistId, market = "US") {
-  return api.get(`/artists/${artistId}/top-tracks`, {
-    params: { market },
-  });
+export function searchArtistTracks(artistName, limit = 10) {
+  const escapedName = artistName.replaceAll('"', "");
+  return searchTracks(`artist:"${escapedName}"`, limit);
 }
 
 export function getUserPlaylists(limit = 20, offset = 0) {
@@ -85,8 +77,8 @@ export function getUserPlaylists(limit = 20, offset = 0) {
 }
 
 export function getPlaylistTracks(playlistId, limit = 50, offset = 0) {
-  return api.get(`/playlists/${playlistId}/tracks`, {
-    params: { limit, offset },
+  return api.get(`/playlists/${playlistId}/items`, {
+    params: { limit: Math.min(limit, 50), offset },
   });
 }
 

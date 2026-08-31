@@ -19,8 +19,6 @@ export default function useUserProfile(token) {
       setProfile({
         displayName: userRes.data.display_name,
         imageUrl: userRes.data.images?.[0]?.url || null,
-        country: userRes.data.country,
-        product: userRes.data.product,
       });
       setTopTracks(tracksRes.data.items || []);
       setTopArtists(artistsRes.data.items || []);
@@ -32,6 +30,8 @@ export default function useUserProfile(token) {
   }, []);
 
   useEffect(() => {
+    // La carga sincroniza el token OAuth con el perfil remoto.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (token) fetchProfile();
   }, [token, fetchProfile]);
 

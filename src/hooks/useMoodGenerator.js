@@ -13,6 +13,23 @@ function sample(array, n) {
   return out;
 }
 
+export function buildMoodSearchTerms({
+  energy,
+  danceability,
+  valence,
+  tempo,
+}) {
+  const terms = [];
+  if (energy >= 0.67) terms.push("workout");
+  if (energy <= 0.33) terms.push("chill");
+  if (danceability >= 0.67) terms.push("dance");
+  if (valence >= 0.67) terms.push("happy");
+  if (valence <= 0.33) terms.push("sad");
+  if (tempo >= 140) terms.push("fast");
+  if (tempo <= 90) terms.push("slow");
+  return terms;
+}
+
 export default function useMoodGenerator(showMessage) {
   const [energy, setEnergy] = useState(0.5);
   const [danceability, setDanceability] = useState(0.5);
@@ -52,11 +69,29 @@ export default function useMoodGenerator(showMessage) {
 
     setLoadingGenerate(true);
     try {
-      const perGenre = Math.max(5, Math.ceil((limit * 2) / selectedGenres.length));
+      const moodTerms = buildMoodSearchTerms({
+        energy,
+        danceability,
+        valence,
+        tempo,
+      });
+      const perGenre = Math.ceil(limit / selectedGenres.length);
+      const pagesPerGenre = Math.min(Math.ceil(perGenre / 10), 2);
       const results = await Promise.all(
-        selectedGenres.map((genre) =>
-          searchTracks(`genre:"${genre}"`, perGenre).then((res) => res.data.tracks.items || [])
-        )
+        selectedGenres.flatMap((genre) => {
+          const genreQuery = `genre:"${genre}"`;
+          const query = [...moodTerms, genreQuery].join(" ");
+          return Array.from({ length: pagesPerGenre }, (_, page) =>
+            searchTracks(query, 10, undefined, page * 10).then(async (response) => {
+              const tracks = response.data.tracks?.items || [];
+              if (tracks.length > 0 || moodTerms.length === 0 || page > 0) {
+                return tracks;
+              }
+              const fallback = await searchTracks(genreQuery, 10);
+              return fallback.data.tracks?.items || [];
+            })
+          );
+        })
       );
 
       const seen = new Set();
@@ -84,7 +119,15 @@ export default function useMoodGenerator(showMessage) {
     } finally {
       setLoadingGenerate(false);
     }
-  }, [selectedGenres, limit, showMessage]);
+  }, [
+    selectedGenres,
+    limit,
+    energy,
+    danceability,
+    valence,
+    tempo,
+    showMessage,
+  ]);
 
   return {
     energy,

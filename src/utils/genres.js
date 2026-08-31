@@ -1,6 +1,5 @@
-// Curated list of Spotify genre seeds.
-// Spotify deprecated /recommendations/available-genre-seeds in November 2024,
-// so we provide this list locally. These values work as genre filters in /search.
+// Lista local de generos para evitar el endpoint de genre seeds deprecado.
+// Los valores se usan como filtros genre dentro del endpoint Search.
 
 export const GENRE_SEEDS = [
   "acoustic", "afrobeat", "alt-rock", "alternative", "ambient",

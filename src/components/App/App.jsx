@@ -21,9 +21,9 @@ import UserMusicPanel from "../UserMusicPanel/UserMusicPanel";
 import MoodGenerator from "../MoodGenerator/MoodGenerator";
 import PlaylistBrowser from "../PlaylistBrowser/PlaylistBrowser";
 
-const CLIENT_ID = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
+const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const REDIRECT_URI =
-  process.env.REACT_APP_REDIRECT_URI || "http://localhost:3000";
+  import.meta.env.VITE_SPOTIFY_REDIRECT_URI || "http://localhost:5173";
 
 const SCOPES = [
   "playlist-modify-public",
@@ -47,7 +47,7 @@ function App() {
         <div className="App-bg" aria-hidden="true" />
         <main className="App-main">
           <p className="App-cta" style={{ color: "var(--coral)" }}>
-            Error: REACT_APP_SPOTIFY_CLIENT_ID no está configurado. Copia
+            Error: VITE_SPOTIFY_CLIENT_ID no está configurado. Copia
             .env.example a .env y agrega tu Client ID de Spotify.
           </p>
         </main>

@@ -1,348 +1,254 @@
 <div align="center">
-  <img src="public/icon.png" alt="Spotify Playlist Generator" width="130">
+  <img src="public/icon.png" alt="Logo de Spotify Playlist Generator" width="130">
   <h1>Spotify Playlist Generator</h1>
-  <p><strong>Busca música, explora recomendaciones y crea playlists personalizadas directamente en Spotify.</strong></p>
+  <p><strong>Busca música, explora artistas y crea playlists personalizadas directamente en Spotify.</strong></p>
 </div>
 
 ---
 
-SPA en React conectada a Spotify Web API mediante Authorization Code con PKCE. Permite buscar canciones, explorar música por género o estado de ánimo, construir playlists y guardarlas en la cuenta del usuario sin exponer un client secret.
+SPA en React conectada a Spotify Web API mediante Authorization Code con PKCE. Permite buscar canciones, descubrir música por artista, género o preferencias de mood, construir playlists y guardarlas sin exponer un client secret.
 
-[![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)](https://react.dev/)
-[![Spotify](https://img.shields.io/badge/Spotify_API-Web_API-1DB954?logo=spotify)](https://developer.spotify.com/)
-[![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?logo=javascript)](https://developer.mozilla.org/)
-[![OAuth](https://img.shields.io/badge/OAuth-PKCE-1DB954?logo=spotify)](https://developer.spotify.com/documentation/web-api/concepts/authorization)
+[![React](https://img.shields.io/badge/React-19.2.8-61DAFB?logo=react)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8.2.2-646CFF?logo=vite)](https://vite.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-24.20-339933?logo=node.js)](https://nodejs.org/)
+[![Spotify](https://img.shields.io/badge/Spotify-Web_API-1DB954?logo=spotify)](https://developer.spotify.com/)
+[![OAuth](https://img.shields.io/badge/OAuth-PKCE-1DB954)](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)
 [![License](https://img.shields.io/badge/License-All_rights_reserved-lightgrey.svg)]()
-
----
 
 ## Tabla de Contenidos
 
+- [Estado del Proyecto](#estado-del-proyecto)
 - [Funcionalidades](#funcionalidades)
 - [Stack Tecnologico](#stack-tecnologico)
 - [Arquitectura](#arquitectura)
-- [Componentes](#componentes)
-- [Custom Hooks](#custom-hooks)
-- [Spotify API](#spotify-api)
+- [Spotify Web API](#spotify-web-api)
 - [Autenticacion](#autenticacion)
+- [Testing y Calidad](#testing-y-calidad)
 - [Seguridad](#seguridad)
-- [UI y Diseno](#ui-y-diseno)
-- [Estructura del Proyecto](#estructura-del-proyecto)
+- [Estructura](#estructura)
 - [Setup Local](#setup-local)
+- [Deployment](#deployment)
 - [Licencia](#licencia)
 
----
+## Estado del Proyecto
+
+**Estado verificado el 30 de agosto de 2026:** codigo actualizado y compilable, sin deployment publico configurado. El repositorio no tiene GitHub Pages ni una URL de produccion asociada.
+
+La aplicacion fue migrada de Create React App a Vite porque CRA esta deprecado. Tambien adopta los contratos de Spotify publicados en febrero de 2026:
+
+- Creacion de playlists mediante `/me/playlists`.
+- Operaciones de playlist mediante `/playlists/{id}/items`.
+- Search limitado a 10 resultados por pagina.
+- Descubrimiento por artista mediante Search porque top tracks fue retirado.
+- Generos locales y recomendaciones por Search porque los endpoints de recomendaciones estan deprecados.
 
 ## Funcionalidades
 
-| Feature                      | Descripcion                                                                                                      |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **Busqueda de tracks**       | Busqueda en tiempo real en el catalogo de Spotify con debounce                                                   |
-| **Construccion de playlist** | Agregar/remover tracks, reordenar, nombrar, toggle publico/privado                                               |
-| **Guardar en Spotify**       | Exporta la playlist a la cuenta del usuario (crea playlist + agrega tracks en batches de 100)                    |
-| **Recomendaciones**          | Recomendaciones personalizadas basadas en seed tracks, generos o artistas via `/recommendations`                 |
-| **Generador por mood**       | Seleccionar mood (energetico, relajado, fiesta, etc.) y generar playlist automaticamente con parametros de audio |
-| **Explorar tu musica**       | Top tracks y top artists del usuario con drill-down a tracks del artista                                         |
-| **Browser de playlists**     | Ver playlists existentes de la cuenta con tracks y opcion de importar                                            |
-| **Preview de audio**         | Reproduccion de 30s de preview inline por track                                                                  |
-| **Selector de generos**      | Grid de generos musicales para filtrar recomendaciones                                                           |
-| **Notificaciones toast**     | Feedback visual para acciones (guardado, errores, limites)                                                       |
-| **Login/Logout**             | Authorization Code con PKCE, avatar y nombre en header                                                           |
-
----
+| Funcionalidad | Implementacion actual |
+| --- | --- |
+| Busqueda | Tracks mediante `/search`, debounce y cancelacion de requests |
+| Playlist local | Agregar, remover, nombrar y elegir visibilidad |
+| Guardar en Spotify | Crear playlist y agregar items en lotes de hasta 100 URIs |
+| Editar playlist | Importar items y aplicar altas/bajas a una playlist existente |
+| Recomendaciones | Busquedas por nombres de artistas presentes en la playlist |
+| Generador por mood | Generos locales y terminos heurísticos derivados de los controles |
+| Tu musica | Top tracks y top artists del usuario |
+| Exploracion de artista | Search filtrado por nombre de artista |
+| Playlists existentes | Listado, paginacion e importacion de items propios o colaborativos |
+| Preview | Reproduccion solo cuando Spotify entrega `preview_url` |
+| Feedback | Toasts para exito, errores, limites y sesion expirada |
 
 ## Stack Tecnologico
 
-| Capa        | Tecnologia                          | Version      |
-| ----------- | ----------------------------------- | ------------ |
-| Framework   | React (Create React App)            | 18.2         |
-| HTTP Client | Axios                               | 1.15         |
-| Iconos      | React Icons                         | 4.12         |
-| Tipografia  | Fraunces (display) + DM Sans (body) | Google Fonts |
-| CSS         | CSS custom properties + BEM         | N/A          |
-| Testing     | Jest + React Testing Library        | CRA built-in |
-| Build       | react-scripts                       | 5.0.1        |
+| Capa | Tecnologia | Version |
+| --- | --- | ---: |
+| UI | React | 19.2.8 |
+| Build y desarrollo | Vite | 8.2.2 |
+| Runtime | Node.js | 24.20.0 |
+| HTTP | Axios | 1.20.0 |
+| Iconos | React Icons | 5.7.0 |
+| Lint | ESLint | 10.9.1 |
+| Unit tests | Vitest + Testing Library | 4.1.11 |
+| E2E | Playwright | 1.62.1 |
+| CSS | Custom properties + BEM | Sin framework |
 
----
+Todas las dependencias estan fijadas en `package-lock.json`. `npm audit` reporta cero vulnerabilidades conocidas.
 
 ## Arquitectura
 
-### Flujo de datos
-
+```text
+Usuario
+  |
+  +-- useSpotifyAuth
+  |     +-- PKCE state + verifier
+  |     +-- intercambio de authorization code
+  |     +-- refresh token con single-flight
+  |
+  +-- spotifyApi
+  |     +-- interceptor Bearer
+  |     +-- limpieza en 401
+  |     +-- contratos Web API 2026
+  |
+  +-- hooks de negocio
+        +-- busqueda y recomendaciones
+        +-- generador por mood
+        +-- playlist local y exportacion
+        +-- musica y playlists del usuario
 ```
-Usuario abre la app
-    |
-useSpotifyAuth → intercambia el authorization code usando PKCE
-    |
-Token en localStorage → axios interceptor lo inyecta en headers
-    |
-    +-- useSearch → searchTracks() → Resultados
-    +-- useRecommendations → getRecommendations() → Sugerencias
-    +-- useMoodGenerator → parametros de audio → Playlist generada
-    +-- useUserProfile → getCurrentUser() → Avatar + nombre
-    +-- useExistingPlaylists → getUserPlaylists() → Browser
-    +-- useArtistDrilldown → getArtistTopTracks() → Drill-down
-    |
-usePlaylist → estado local del playlist en construccion
-    |
-Guardar → createPlaylist() + addTracksToPlaylist() (batches de 100)
-```
 
-### Patron de hooks
+### Responsabilidades
 
-Toda la logica de negocio esta encapsulada en custom hooks. `App.js` es un orquestador que compone los hooks y renderiza los componentes. Cero logica de negocio en componentes de UI.
+| Capa | Responsabilidad |
+| --- | --- |
+| `src/components/` | Renderizado y eventos de interfaz |
+| `src/hooks/` | Estado, efectos, concurrencia y mensajes |
+| `src/services/spotifyApi.js` | Endpoints, parametros y payloads Spotify |
+| `src/services/spotifyAuthSession.js` | Tokens, expiracion y renovacion PKCE |
+| `src/utils/` | PKCE, generos y helpers puros |
 
-| Capa                         | Responsabilidad                                             |
-| ---------------------------- | ----------------------------------------------------------- |
-| `src/services/spotifyApi.js` | Axios instance + API wrappers (12 endpoints)                |
-| `src/hooks/`                 | 10 custom hooks con toda la logica de estado y side effects |
-| `src/components/`            | 13 componentes de UI (presentacionales)                     |
-| `src/utils/spotify.js`       | Helpers puros (chunkUris, formatArtists)                    |
+## Spotify Web API
 
----
+| Funcion local | Endpoint vigente |
+| --- | --- |
+| `searchTracks()` | `GET /search` |
+| `getCurrentUser()` | `GET /me` |
+| `getUserTopItems()` | `GET /me/top/{type}` |
+| `getUserPlaylists()` | `GET /me/playlists` |
+| `createPlaylist()` | `POST /me/playlists` |
+| `getPlaylistTracks()` | `GET /playlists/{id}/items` |
+| `addTracksToPlaylist()` | `POST /playlists/{id}/items` |
+| `removeTracksFromPlaylist()` | `DELETE /playlists/{id}/items` |
+| `searchArtistTracks()` | `GET /search?q=artist:"nombre"` |
 
-## Componentes
-
-### Layout y navegacion
-
-| Componente | Archivo            | Descripcion                                                       |
-| ---------- | ------------------ | ----------------------------------------------------------------- |
-| `App`      | `App/App.js`       | Orquestador principal, compone hooks + tabs + panels              |
-| `Header`   | `Header/Header.js` | Logo, avatar del usuario, boton login/logout                      |
-| `TabBar`   | `TabBar/TabBar.js` | Navegacion por tabs (Buscar, Tu musica, Generador, Mis playlists) |
-| `Toast`    | `Toast/Toast.js`   | Notificacion toast con auto-dismiss                               |
-
-### Panels (contenido por tab)
-
-| Componente             | Descripcion                                                              |
-| ---------------------- | ------------------------------------------------------------------------ |
-| `SearchForm`           | Input de busqueda con debounce                                           |
-| `ResultsPanel`         | Grid de resultados de busqueda (TrackCards)                              |
-| `PlaylistPanel`        | Panel lateral con playlist en construccion, nombre, opciones de guardado |
-| `RecommendationsPanel` | Recomendaciones basadas en seeds + generos                               |
-| `UserMusicPanel`       | Top tracks/artists del usuario + drill-down                              |
-| `MoodGenerator`        | Generador por mood con sliders de parametros de audio                    |
-| `PlaylistBrowser`      | Browser de playlists existentes con importacion                          |
-| `GenreSelector`        | Grid de generos para seeds de recomendaciones                            |
-
-### Elementos reutilizables
-
-| Componente           | Descripcion                                                                 |
-| -------------------- | --------------------------------------------------------------------------- |
-| `TrackCard`          | Card de track con imagen, titulo, artista, album, boton add/remove, preview |
-| `PlaylistItem`       | Item dentro del playlist con handle de drag, boton remove                   |
-| `AudioPreviewButton` | Boton play/pause para preview de 30s                                        |
-| `Slider`             | Input range estilizado para parametros de audio                             |
-
----
-
-## Custom Hooks
-
-| Hook                   | Lineas | Responsabilidad                                                                          |
-| ---------------------- | ------ | ---------------------------------------------------------------------------------------- |
-| `useSpotifyAuth`       | 73     | OAuth token extraction, localStorage, expiry, CSRF state validation                      |
-| `usePlaylist`          | 162    | Estado del playlist (tracks, nombre, publico), add/remove/reorder, save con batch de 100 |
-| `useMoodGenerator`     | 98     | Mood presets → parametros de audio (energy, danceability, valence) → recomendaciones     |
-| `useAudioPlayer`       | 90     | Singleton Audio(), play/pause/stop, track activo, cleanup                                |
-| `useExistingPlaylists` | 82     | Fetch playlists del usuario, paginacion, importar tracks                                 |
-| `useSearch`            | 56     | Busqueda con debounce, AbortController para cancelar requests                            |
-| `useUserProfile`       | 39     | Fetch perfil del usuario (nombre, avatar)                                                |
-| `useRecommendations`   | 39     | Fetch recomendaciones con seed tracks/genres/artists                                     |
-| `useArtistDrilldown`   | 39     | Top tracks de un artista seleccionado                                                    |
-| `useMessage`           | 23     | Estado de toast messages con auto-clear                                                  |
-
----
-
-## Spotify API
-
-### Servicio centralizado (`src/services/spotifyApi.js`)
-
-Axios instance con interceptors para auth automatica y manejo de 401.
-
-| Funcion                              | Endpoint Spotify                                | Uso                        |
-| ------------------------------------ | ----------------------------------------------- | -------------------------- |
-| `searchTracks(query)`                | `GET /v1/search`                                | Busqueda de tracks         |
-| `getCurrentUser()`                   | `GET /v1/me`                                    | Perfil del usuario         |
-| `createPlaylist(userId, name)`       | `POST /v1/users/{id}/playlists`                 | Crear playlist             |
-| `addTracksToPlaylist(id, uris)`      | `POST /v1/playlists/{id}/tracks`                | Agregar tracks (batch 100) |
-| `removeTracksFromPlaylist(id, uris)` | `DELETE /v1/playlists/{id}/tracks`              | Remover tracks             |
-| `getRecommendations(params)`         | `GET /v1/recommendations`                       | Recomendaciones            |
-| `getGenreSeeds()`                    | `GET /v1/recommendations/available-genre-seeds` | Generos disponibles        |
-| `getUserTopItems(type, range)`       | `GET /v1/me/top/{type}`                         | Top tracks/artists         |
-| `getArtistTopTracks(artistId)`       | `GET /v1/artists/{id}/top-tracks`               | Tracks de un artista       |
-| `getUserPlaylists(limit, offset)`    | `GET /v1/me/playlists`                          | Playlists del usuario      |
-| `getPlaylistTracks(id)`              | `GET /v1/playlists/{id}/tracks`                 | Tracks de un playlist      |
-
----
+Las respuestas de playlists usan `items.items[].item`. Se conserva compatibilidad de lectura con el formato anterior cuando aparece en datos cacheados o mocks.
 
 ## Autenticacion
 
-### Authorization Code con PKCE
+1. La app genera `state`, `code_verifier` y `code_challenge` S256.
+2. Redirige a Spotify con `response_type=code`.
+3. Valida `state` al regresar para prevenir CSRF.
+4. Intercambia el authorization code sin client secret.
+5. Guarda access token, expiracion y refresh token en almacenamiento local.
+6. Renueva el access token antes de expirar y comparte una sola solicitud de refresh concurrente.
+7. Ante un 401 limpia la sesion y solicita autenticacion nueva.
 
-```
-1. Usuario hace clic en "Iniciar sesion"
-2. Redirect a accounts.spotify.com/authorize con:
-   - client_id, redirect_uri, response_type=code
-   - scope: playlist-modify-public, playlist-modify-private,
-            user-read-private, user-top-read, playlist-read-private
-   - state: UUID aleatorio para protección CSRF
-   - code_challenge S256 derivado de un verifier local
-3. Spotify redirige con un authorization code
-4. useSpotifyAuth valida state e intercambia el code con el verifier PKCE
-5. El access token y su expiración se guardan localmente
-6. Axios inyecta el Bearer token en cada request
-7. En 401 o token expirado se limpia la sesión y se solicita autenticación nueva
+Scopes solicitados:
+
+- `playlist-modify-public`
+- `playlist-modify-private`
+- `playlist-read-private`
+- `user-read-private`
+- `user-top-read`
+
+## Testing y Calidad
+
+```bash
+npm run lint
+npm test
+npm run test:coverage
+npm run build
+npm run test:e2e
+npm audit --audit-level=high
 ```
 
----
+Verificacion local actual:
+
+| Gate | Resultado |
+| --- | --- |
+| ESLint | Sin errores |
+| Vitest | 19 pruebas aprobadas |
+| Cobertura | 42.77% statements, 42.54% lineas; umbral minimo 30% |
+| Vite build | Produccion generada en `dist/` |
+| Playwright | Smoke PKCE aprobado en Chromium |
+| npm audit | 0 vulnerabilidades |
+
+Los unit tests cubren PKCE, renovacion de sesion, contratos Spotify, lotes de URIs, normalizacion de playlist, creacion y recomendaciones. El E2E verifica el render desconectado y los parametros PKCE del enlace de login.
 
 ## Seguridad
 
-| Medida                     | Implementacion                                                                 |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| **CSRF protection**        | `crypto.randomUUID()` como state en OAuth, validado al retorno                 |
-| **Token expiry**           | `token_expires_at` en localStorage, interceptor verifica antes de cada request |
-| **Auto-cleanup**           | 401 response → limpia token + dispara `spotify-auth-error` event               |
-| **No secrets en frontend** | Solo Client ID (publico), no Client Secret                                     |
-| **AbortController**        | Cancela requests pendientes en busqueda para evitar race conditions            |
+| Control | Implementacion |
+| --- | --- |
+| Client secret | No existe en el frontend |
+| CSRF | `state` aleatorio validado al retorno OAuth |
+| PKCE | Verifier criptografico y challenge SHA-256 |
+| Renovacion | Refresh token sin client secret y solicitud single-flight |
+| Sesion expirada | Limpieza automatica ante expiracion o 401 |
+| CSP | Solo Spotify API, Spotify Accounts, fuentes e imagenes permitidas |
+| Requests | AbortController en busqueda y limites oficiales por pagina |
 
----
+El Client ID es publico por diseño. Nunca deben almacenarse en el repositorio access tokens, refresh tokens ni un Spotify Client Secret.
 
-## UI y Diseno
+## Estructura
 
-### Tema visual
-
-Tema oscuro editorial ("sala de escucha nocturna") con CSS custom properties en `:root`.
-
-### Tipografia
-
-| Fuente       | Uso                                   |
-| ------------ | ------------------------------------- |
-| **Fraunces** | Display, headings, titulos de seccion |
-| **DM Sans**  | Body text, labels, botones            |
-
-### Paleta (CSS custom properties)
-
-| Variable           | Uso                      |
-| ------------------ | ------------------------ |
-| `--bg-app`         | Fondo principal (oscuro) |
-| `--bg-panel`       | Fondo de panels/cards    |
-| `--text-primary`   | Texto principal          |
-| `--text-secondary` | Texto secundario         |
-| `--accent`         | Spotify green para CTAs  |
-| `--accent-hover`   | Green hover              |
-
-### CSS
-
-- BEM-style class names (`TrackCard`, `Panel`, `Btn--primary`)
-- CSS custom properties para theming
-- Responsive sin framework CSS
-- Transiciones suaves en hover/focus
-
----
-
-## Estructura del Proyecto
-
-```
+```text
 Spotify-Playlist-Generator/
-├── src/
-│   ├── components/                    # 13 componentes UI
-│   │   ├── App/                      # Orquestador principal (259 lineas)
-│   │   ├── Header/                   # Logo + avatar + login/logout
-│   │   ├── TabBar/                   # Navegacion por tabs
-│   │   ├── SearchForm/               # Input de busqueda
-│   │   ├── ResultsPanel/             # Grid de resultados
-│   │   ├── PlaylistPanel/            # Panel del playlist en construccion
-│   │   ├── RecommendationsPanel/     # Recomendaciones personalizadas
-│   │   ├── UserMusicPanel/           # Top tracks/artists
-│   │   ├── MoodGenerator/            # Generador por mood
-│   │   ├── PlaylistBrowser/          # Browser de playlists existentes
-│   │   ├── GenreSelector/            # Grid de generos
-│   │   ├── TrackCard/                # Card de track reutilizable
-│   │   ├── PlaylistItem/             # Item de playlist
-│   │   ├── AudioPreviewButton/       # Preview de 30s
-│   │   ├── Slider/                   # Range input estilizado
-│   │   └── Toast/                    # Notificacion toast
-│   ├── hooks/                         # 10 custom hooks (701 lineas)
-│   │   ├── useSpotifyAuth.js         # OAuth token management
-│   │   ├── usePlaylist.js            # Estado del playlist
-│   │   ├── useMoodGenerator.js       # Mood → audio params → tracks
-│   │   ├── useAudioPlayer.js         # Singleton audio preview
-│   │   ├── useExistingPlaylists.js   # Browser de playlists
-│   │   ├── useSearch.js              # Busqueda con debounce
-│   │   ├── useUserProfile.js         # Perfil del usuario
-│   │   ├── useRecommendations.js     # Fetch recomendaciones
-│   │   ├── useArtistDrilldown.js     # Top tracks por artista
-│   │   └── useMessage.js             # Toast state management
-│   ├── services/
-│   │   └── spotifyApi.js             # Axios + 12 API wrappers
-│   ├── utils/
-│   │   └── spotify.js                # chunkUris, formatArtists
-│   ├── images/                        # Assets
-│   ├── index.js                       # Entry point
-│   └── index.css                      # Global reset
+├── index.html
 ├── public/
-│   ├── index.html                     # HTML con Google Fonts
-│   ├── manifest.json                  # PWA manifest
-│   └── robots.txt                     # SEO
-├── package.json                       # Dependencias
-├── .env.example                       # Variables de entorno
-└── .gitignore
-
-29 archivos JS + 17 archivos CSS en src/
-~2,400 lineas de codigo en componentes + hooks
+│   ├── icon.png
+│   ├── manifest.json
+│   └── robots.txt
+├── src/
+│   ├── components/       # 16 componentes JSX
+│   ├── hooks/            # 10 hooks de negocio
+│   ├── services/         # Spotify API y sesion OAuth
+│   ├── test/             # Setup Vitest
+│   ├── utils/            # PKCE, generos y helpers
+│   ├── main.jsx
+│   └── index.css
+├── tests/e2e/
+├── eslint.config.js
+├── playwright.config.js
+├── vite.config.js
+├── package.json
+└── package-lock.json
 ```
-
----
 
 ## Setup Local
 
-### Prerrequisitos
+### Requisitos
 
-- Node.js 18+
-- Cuenta de Spotify Developer ([dashboard](https://developer.spotify.com/dashboard))
+- Node.js 24.20.0
+- npm 11
+- Una app en [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 
-### Configuracion
+### Instalacion
 
 ```bash
-# 1. Clonar
 git clone https://github.com/PickleRickHND/Spotify-Playlist-Generator.git
 cd Spotify-Playlist-Generator
-
-# 2. Instalar dependencias
-npm install
-
-# 3. Variables de entorno
+nvm use
+npm ci
 cp .env.example .env
-# Editar .env:
-#   REACT_APP_SPOTIFY_CLIENT_ID=tu_client_id
-#   REACT_APP_REDIRECT_URI=http://localhost:3000
-
-# 4. Configurar en Spotify Dashboard:
-#   - Redirect URI: http://localhost:3000
-#   - Scopes: playlist-modify-public, playlist-modify-private,
-#             user-read-private, user-top-read, playlist-read-private
-
-# 5. Iniciar
-npm start
-# Abrir http://localhost:3000
 ```
 
-### Comandos
+Variables:
+
+```dotenv
+VITE_SPOTIFY_CLIENT_ID=tu_client_id
+VITE_SPOTIFY_REDIRECT_URI=http://localhost:5173
+```
+
+Registra exactamente `http://localhost:5173` como Redirect URI en Spotify Dashboard.
 
 ```bash
-npm start          # Dev server (localhost:3000)
-npm run build      # Build de produccion en /build
-npm test           # Jest en modo watch
-npm test -- --watchAll=false  # Single run (CI)
+npm run dev
 ```
 
----
+La app queda disponible en `http://localhost:5173`.
+
+## Deployment
+
+No hay un deployment publico activo verificado. Para publicar se debe:
+
+1. Configurar las dos variables `VITE_*` en el proveedor de hosting.
+2. Registrar la URL HTTPS exacta como Redirect URI en Spotify Dashboard.
+3. Ejecutar todos los gates locales y CI.
+4. Publicar el contenido generado en `dist/`.
 
 ## Licencia
 
-Repositorio público sin licencia de reutilización. Todos los derechos reservados.
+Repositorio publico sin licencia de reutilizacion. Todos los derechos reservados.
 
 ## Autor
 
-**Douglas Hedman** - Diseno, desarrollo y arquitectura
+**Douglas Hedman**: diseño, desarrollo y arquitectura.

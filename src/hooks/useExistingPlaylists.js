@@ -20,7 +20,7 @@ export default function useExistingPlaylists(showMessage) {
           id: p.id,
           name: p.name,
           imageUrl: p.images?.[0]?.url || null,
-          trackCount: p.tracks?.total || 0,
+          trackCount: p.items?.total ?? p.tracks?.total ?? 0,
           isPublic: p.public,
           owner: p.owner?.display_name || "",
         }))
@@ -42,8 +42,8 @@ export default function useExistingPlaylists(showMessage) {
     while (offset < 200) {
       const { data } = await getPlaylistTracks(playlistId, pageSize, offset);
       const items = (data.items || [])
-        .filter((item) => item.track)
-        .map((item) => item.track);
+        .map((entry) => entry.item ?? entry.track)
+        .filter((item) => item?.type === "track");
       allTracks.push(...items);
 
       if (!data.next || items.length < pageSize) break;

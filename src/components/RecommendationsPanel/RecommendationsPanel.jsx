@@ -17,16 +17,16 @@ export default function RecommendationsPanel({
 }) {
   const prevSeedsRef = useRef("");
 
-  const { seedKey, seedTrackIds, artistIds, trackIds } = useMemo(() => {
+  const { seedKey, seedTrackIds, artistNames, trackIds } = useMemo(() => {
     const trackIds = playlist.map((t) => t.id);
     const seedTrackIds = trackIds.slice(0, 5);
-    const artistIds = playlist
-      .flatMap((t) => (t.artists || []).map((a) => a.id))
+    const artistNames = playlist
+      .flatMap((t) => (t.artists || []).map((a) => a.name))
       .filter(Boolean);
     return {
       seedKey: seedTrackIds.join(","),
       seedTrackIds,
-      artistIds,
+      artistNames,
       trackIds,
     };
   }, [playlist]);
@@ -34,14 +34,14 @@ export default function RecommendationsPanel({
   useEffect(() => {
     if (seedTrackIds.length >= 2 && seedKey !== prevSeedsRef.current) {
       prevSeedsRef.current = seedKey;
-      onFetch(seedTrackIds, artistIds, trackIds);
+      onFetch(seedTrackIds, artistNames, trackIds);
     }
-  }, [seedKey, seedTrackIds, artistIds, trackIds, onFetch]);
+  }, [seedKey, seedTrackIds, artistNames, trackIds, onFetch]);
 
   if (playlist.length < 2) return null;
 
   const handleRefresh = () => {
-    onFetch(seedTrackIds, artistIds, trackIds);
+    onFetch(seedTrackIds, artistNames, trackIds);
   };
 
   return (

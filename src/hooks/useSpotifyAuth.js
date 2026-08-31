@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { generateCodeVerifier, generateCodeChallenge } from "../utils/pkce";
+import {
+  clearSpotifySession,
+  getStoredAccessToken,
+  getStoredExpiry,
+  refreshSpotifySession,
+  storeSpotifySession,
+} from "../services/spotifyAuthSession";
 
 const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
@@ -59,22 +66,6 @@ export default function useSpotifyAuth({ clientId, redirectUri }) {
     didInitRef.current = true;
 
     const init = async () => {
-      const storedToken = window.localStorage.getItem("token");
-      const expiresAt = parseInt(
-        window.localStorage.getItem("token_expires_at") || "0",
-        10
-      );
-
-      if (storedToken && expiresAt > 0 && Date.now() < expiresAt) {
-        setToken(storedToken);
-        return;
-      }
-
-      if (storedToken) {
-        window.localStorage.removeItem("token");
-        window.localStorage.removeItem("token_expires_at");
-      }
-
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       const returnedState = params.get("state");
@@ -84,6 +75,28 @@ export default function useSpotifyAuth({ clientId, redirectUri }) {
         setAuthError(`Spotify: ${errorParam}`);
         window.history.replaceState(null, "", window.location.pathname);
         return;
+      }
+
+      const storedToken = getStoredAccessToken();
+      const expiresAt = getStoredExpiry();
+
+      if (!code && storedToken && expiresAt > 0 && Date.now() < expiresAt) {
+        setToken(storedToken);
+        return;
+      }
+
+      if (!code && window.localStorage.getItem("refresh_token")) {
+        try {
+          const refreshedToken = await refreshSpotifySession(clientId);
+          if (refreshedToken) {
+            setToken(refreshedToken);
+            return;
+          }
+        } catch {
+          clearSpotifySession();
+        }
+      } else if (!code && storedToken) {
+        clearSpotifySession();
       }
 
       if (!code) return;
@@ -96,7 +109,7 @@ export default function useSpotifyAuth({ clientId, redirectUri }) {
       sessionStorage.removeItem("spotify_code_verifier");
 
       if (!savedState || savedState !== returnedState) {
-        setAuthError("OAuth state mismatch — posible CSRF. Intenta de nuevo.");
+        setAuthError("OAuth state mismatch: posible CSRF. Intenta de nuevo.");
         return;
       }
 
@@ -114,13 +127,7 @@ export default function useSpotifyAuth({ clientId, redirectUri }) {
           verifier,
         });
 
-        const expAt = Date.now() + (data.expires_in || 3600) * 1000;
-        window.localStorage.setItem("token", data.access_token);
-        window.localStorage.setItem("token_expires_at", expAt.toString());
-        if (data.refresh_token) {
-          window.localStorage.setItem("refresh_token", data.refresh_token);
-        }
-        setToken(data.access_token);
+        setToken(storeSpotifySession(data));
       } catch (err) {
         setAuthError(err.message || "Error intercambiando el código");
       } finally {
@@ -134,20 +141,31 @@ export default function useSpotifyAuth({ clientId, redirectUri }) {
   useEffect(() => {
     const handleAuthError = () => {
       setToken("");
-      window.localStorage.removeItem("token");
-      window.localStorage.removeItem("token_expires_at");
-      window.localStorage.removeItem("refresh_token");
+      clearSpotifySession();
     };
     window.addEventListener("spotify-auth-error", handleAuthError);
     return () =>
       window.removeEventListener("spotify-auth-error", handleAuthError);
   }, []);
 
+  useEffect(() => {
+    if (!token) return undefined;
+    const refreshIn = Math.max(getStoredExpiry() - Date.now() - 60_000, 1000);
+    const timer = window.setTimeout(async () => {
+      try {
+        const refreshedToken = await refreshSpotifySession(clientId);
+        if (refreshedToken) setToken(refreshedToken);
+      } catch {
+        clearSpotifySession();
+        setToken("");
+      }
+    }, refreshIn);
+    return () => window.clearTimeout(timer);
+  }, [clientId, token]);
+
   const logout = useCallback(() => {
     setToken("");
-    window.localStorage.removeItem("token");
-    window.localStorage.removeItem("token_expires_at");
-    window.localStorage.removeItem("refresh_token");
+    clearSpotifySession();
   }, []);
 
   return { token, logout, authError, exchanging };
